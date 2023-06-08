@@ -66,12 +66,24 @@ class ConnectionParameters(BaseConnectionParameters):
 class MQTTTransport(BaseTransport):
     """MQTTTransport.
     """
+    transports = []
+
     @classmethod
     def logger(cls) -> logging.Logger:
         global mqtt_logger
         if mqtt_logger is None:
             mqtt_logger = logging.getLogger(__name__)
         return mqtt_logger
+
+    @classmethod
+    def get_transport(cls, *args, **kwargs) -> "MQTTTransport":
+        "MQTTTransport factory"
+        #TODO: Find existing transport instance with the same args
+        if len(cls.transports) == 0:
+            transport = cls(*args, **kwargs)
+            cls.transports.append(transport)
+            print("New transport created {}", transport)
+        return cls.transports[0]
 
     def __init__(self,
                  serializer: Serializer = JSONSerializer(),
@@ -695,9 +707,9 @@ class RPCClient(BaseRPCClient):
         self._response = None
 
         super(RPCClient, self).__init__(*args, **kwargs)
-        self._transport = MQTTTransport(conn_params=self._conn_params,
-                                        serializer=self._serializer,
-                                        compression=self._compression)
+        self._transport = MQTTTransport.get_transport(conn_params=self._conn_params,
+                                                      serializer=self._serializer,
+                                                      compression=self._compression)
 
     def _gen_queue_name(self):
         """_gen_queue_name.
