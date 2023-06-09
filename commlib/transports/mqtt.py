@@ -310,7 +310,7 @@ class Publisher(BasePublisher):
         """
         self._msg_seq = 0
         super().__init__(*args, **kwargs)
-        self._transport = MQTTTransport(conn_params=self._conn_params,
+        self._transport = MQTTTransport.get_transport(conn_params=self._conn_params,
                                         serializer=self._serializer,
                                         compression=self._compression)
 
@@ -379,7 +379,7 @@ class Subscriber(BaseSubscriber):
             kwargs: See BaseSubscriber
         """
         super(Subscriber, self).__init__(*args, **kwargs)
-        self._transport = MQTTTransport(conn_params=self._conn_params,
+        self._transport = MQTTTransport.get_transport(conn_params=self._conn_params,
                                         serializer=self._serializer,
                                         compression=self._compression)
 
@@ -473,7 +473,7 @@ class RPCService(BaseRPCService):
             kwargs: See BaseRPCService
         """
         super(RPCService, self).__init__(*args, **kwargs)
-        self._transport = MQTTTransport(conn_params=self._conn_params,
+        self._transport = MQTTTransport.get_transport(conn_params=self._conn_params,
                                         serializer=self._serializer,
                                         compression=self._compression)
 
@@ -563,7 +563,7 @@ class RPCServer(BaseRPCServer):
             kwargs: See BaseRPCServer
         """
         super(RPCServer, self).__init__(*args, **kwargs)
-        self._transport = MQTTTransport(conn_params=self._conn_params,
+        self._transport = MQTTTransport.get_transport(conn_params=self._conn_params,
                                         serializer=self._serializer,
                                         compression=self._compression)
         for uri in self._svc_map:
@@ -901,7 +901,7 @@ class EventEmitter(BaseEventEmitter):
         """
         super(EventEmitter, self).__init__(*args, **kwargs)
 
-        self._transport = MQTTTransport(conn_params=self._conn_params,
+        self._transport = MQTTTransport.get_transport(conn_params=self._conn_params,
                                         serializer=self._serializer)
 
     def send_event(self,
