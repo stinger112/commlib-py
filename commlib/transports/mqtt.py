@@ -2,7 +2,7 @@ import functools
 import logging
 import time
 from enum import IntEnum
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.packettypes import PacketTypes
@@ -66,7 +66,7 @@ class ConnectionParameters(BaseConnectionParameters):
 class MQTTTransport(BaseTransport):
     """MQTTTransport.
     """
-    transports = []
+    transport: Optional["MQTTTransport"] = None
 
     @classmethod
     def logger(cls) -> logging.Logger:
@@ -78,12 +78,14 @@ class MQTTTransport(BaseTransport):
     @classmethod
     def get_transport(cls, *args, **kwargs) -> "MQTTTransport":
         "MQTTTransport factory"
-        #TODO: Find existing transport instance with the same args
-        if len(cls.transports) == 0:
+        #TODO: Add multiple transports for different endpoints
+        if cls.transport is None:
             transport = cls(*args, **kwargs)
-            cls.transports.append(transport)
-            print("New transport created {}", transport)
-        return cls.transports[0]
+            cls.transport = transport
+        elif not cls.transport.is_connected:
+            cls.transport.disconnect()
+            cls.transport.connect()
+        return cls.transport
 
     def __init__(self,
                  serializer: Serializer = JSONSerializer(),
