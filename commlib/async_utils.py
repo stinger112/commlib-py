@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import logging
 import time
+from functools import partial, wraps
 
 
 async def safe_wrapper(c):
@@ -64,3 +65,13 @@ def call_sync(coro,
             )
             loop = asyncio.new_event_loop()
     return loop.run_until_complete(asyncio.wait_for(coro, timeout))
+
+
+def async_wrap(func):
+    @wraps(func)
+    async def run(*args, loop=None, executor=None, **kwargs):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        pfunc = partial(func, *args, **kwargs)
+        return await loop.run_in_executor(executor, pfunc)
+    return run
