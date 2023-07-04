@@ -66,7 +66,7 @@ class ConnectionParameters(BaseConnectionParameters):
 class MQTTTransport(BaseTransport):
     """MQTTTransport.
     """
-    transport: Optional["MQTTTransport"] = None
+    _transport: Optional["MQTTTransport"] = None
 
     @classmethod
     def logger(cls) -> logging.Logger:
@@ -75,17 +75,23 @@ class MQTTTransport(BaseTransport):
             mqtt_logger = logging.getLogger(__name__)
         return mqtt_logger
 
+    def __enter__(self):
+        MQTTTransport._transport = self
+        self.start()
+        return MQTTTransport._transport
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.stop()
+        MQTTTransport._transport = None
+
     @classmethod
     def get_transport(cls, *args, **kwargs) -> "MQTTTransport":
         "MQTTTransport factory"
-        #TODO: Add multiple transports for different endpoints
-        if cls.transport is None:
-            transport = cls(*args, **kwargs)
-            cls.transport = transport
-        elif not cls.transport.is_connected:
-            cls.transport.disconnect()
-            cls.transport.connect()
-        return cls.transport
+        #TODO: Add transport pool for different ConnectionParameters
+        if cls._transport is None:
+            raise Exception("No MQTT transports created")
+        return cls._transport
+
 
     def __init__(self,
                  serializer: Serializer = JSONSerializer(),
@@ -555,6 +561,7 @@ class RPCService(BaseRPCService):
                     break
             time.sleep(0.001)
         self._transport.stop()
+
 
 class RPCServer(BaseRPCServer):
     def __init__(self, *args, **kwargs):
