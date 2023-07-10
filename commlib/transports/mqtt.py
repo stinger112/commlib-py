@@ -78,7 +78,7 @@ class MQTTTransport(BaseTransport):
     def __enter__(self):
         MQTTTransport._transport = self
         self.start()
-        return MQTTTransport._transport
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.stop()

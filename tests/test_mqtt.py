@@ -5,10 +5,12 @@ from time import sleep
 
 import pytest
 
-from commlib.async_utils import safe_gather, async_wrap
+from commlib.async_utils import async_wrap, safe_gather, wait_til
 from commlib.compression import CompressionType
 from commlib.msg import RPCMessage
 from commlib.transports.mqtt import ConnectionParameters, MQTTTransport, RPCClient
+
+PARALLEL_CLIENTS_N = 100
 
 conn_params = ConnectionParameters(
     host="localhost", port=1883, username="admin", password="admin"
@@ -27,15 +29,13 @@ class AddTwoIntMessage(RPCMessage):
 
 @pytest.mark.asyncio
 async def test_multiple_clients():
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=PARALLEL_CLIENTS_N) as pool:
         with MQTTTransport(
             conn_params=conn_params,
             compression=compression,
         ) as transport:
-            while transport.is_connected is not True:
-                sleep(0.1)
-            assert transport.is_connected is True
-            n = 100
+            await wait_til(lambda: transport.is_connected)
+            n = PARALLEL_CLIENTS_N
             clients = []
             for i in range(n):
                 client = RPCClient(
@@ -53,6 +53,6 @@ async def test_multiple_clients():
                     AddTwoIntMessage.Request(a=i, b=0), timeout=5, executor=pool
                 )
                 futures.append(future)
-            resps = await safe_gather(*futures)
-            print("Numbers:", [resp.c for resp in resps])
+            resps = await asyncio.wait_for(safe_gather(*futures), timeout=10)
+            print("Response numbers:", [resp.c for resp in resps])
             assert list(range(n)) == [resp.c for resp in resps]
