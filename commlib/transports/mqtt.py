@@ -75,15 +75,6 @@ class MQTTTransport(BaseTransport):
             mqtt_logger = logging.getLogger(__name__)
         return mqtt_logger
 
-    def __enter__(self):
-        MQTTTransport._transport = self
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        self.stop()
-        MQTTTransport._transport = None
-
     @classmethod
     def get_transport(cls, *args, **kwargs) -> "MQTTTransport":
         "MQTTTransport factory"
@@ -109,6 +100,7 @@ class MQTTTransport(BaseTransport):
         self._client = None
         self._serializer = serializer
         self._compression= compression
+        self._loop_started = False
 
         ## Workaround for both v3 and v5 support
         # http://www.steves-internet-guide.com/python-mqtt-client-changes/
@@ -119,6 +111,16 @@ class MQTTTransport(BaseTransport):
             properties = None
         self._mqtt_properties = properties
         self.connect()
+
+    def __enter__(self):
+        MQTTTransport._transport = self
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.stop()
+        MQTTTransport._transport = None
+
 
     def on_connect(self,
                    client: Any,
@@ -165,6 +167,7 @@ class MQTTTransport(BaseTransport):
             rc (int): Return Code - Internal paho-mqtt
         """
         self._connected = False
+        self._loop_started = False
         self._client.loop_stop()
         if rc == 5:
             self.log.debug(f"Authentication error with MQTT broker")
@@ -286,13 +289,16 @@ class MQTTTransport(BaseTransport):
 
         Start the event loop. Cannot create any more endpoints from here on.
         """
-        self._client.loop_start()
+        if not self._loop_started:
+            self._loop_started = True
+            self._client.loop_start()
 
     def stop(self) -> None:
         """stop.
 
         Disconnects the client and stops the event loop.
         """
+        self._loop_started = False
         self.disconnect()
         self._client.loop_stop(force=True)
 
@@ -301,7 +307,9 @@ class MQTTTransport(BaseTransport):
 
         Starts the loop and waits until termination. This is synchronous.
         """
-        self._client.loop_forever()
+        if not self._loop_started:
+            self._loop_started = True
+            self._client.loop_forever()
 
 
 class Publisher(BasePublisher):
