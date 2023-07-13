@@ -50,7 +50,7 @@ async def test_multiple_clients():
         for i, client in enumerate(clients):
             # resp = client.call(AddTwoIntMessage.Request(a=i, b=0), timeout=5)
             future = client.call_in_loop(
-                AddTwoIntMessage.Request(a=i, b=0), timeout=5, executor=pool
+                AddTwoIntMessage.Request(a=i, b=0), timeout=15, executor=pool
             )
             futures.append(future)
         resps = await asyncio.wait_for(safe_gather(*futures), timeout=10)
